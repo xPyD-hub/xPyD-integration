@@ -1,0 +1,51 @@
+name: Integration Tests
+
+on:
+  repository_dispatch:
+    types: [dependency-updated, pr-check]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *'  # nightly at 2am UTC
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # If triggered by a PR check, install that project from PR branch
+          if [ "${{ github.event.client_payload.ref }}" != "" ]; then
+            pip install "git+https://github.com/xPyD-hub/${{ github.event.client_payload.repo }}@${{ github.event.client_payload.ref }}"
+          fi
+          pip install -e ".[dev]"
+
+      - name: Run e2e tests
+        run: pytest tests/e2e/ -v --tb=short --timeout=120
+
+  stress:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'schedule' || github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run stress tests
+        run: pytest tests/stress/ -v --tb=short --timeout=300 -m stress
