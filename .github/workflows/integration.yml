@@ -19,6 +19,9 @@ on:
   schedule:
     - cron: '0 2 * * *'
 
+  pull_request:
+    branches: [main]
+
   push:
     branches: [main]
 
@@ -78,7 +81,6 @@ jobs:
   xpyd:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
