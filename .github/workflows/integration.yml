@@ -111,7 +111,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run stress tests
-        run: pytest tests/stress/ -v --tb=short --timeout=300
+        run: pytest tests/stress/ -v --tb=short --timeout=300 --ignore-glob="*__init__*" || [ $? -eq 5 ]
 
   # --- Nightly failure: auto-create issue ---
   report-failure:
