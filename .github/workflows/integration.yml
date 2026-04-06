@@ -164,23 +164,15 @@ jobs:
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           DATE=$(date -u +%Y-%m-%d)
 
-          BODY="## Nightly Integration Test Failure
-
-**Date:** ${DATE}
-**Run:** ${RUN_URL}
-
-### Failed Jobs
-- e2e: ${{ needs.e2e.result }}
-- stress: ${{ needs.stress.result }}
-
-### Recent Commits (last 24h)
-- proxy: ${{ steps.blame.outputs.proxy_commits }} commits
-- sim: ${{ steps.blame.outputs.sim_commits }} commits
-- bench: ${{ steps.blame.outputs.bench_commits }} commits
-
-### Auto-triage
-Issue filed in **${TARGET}** based on recent commit activity.
-If misattributed, move to the correct repo."
+          BODY=$(cat <<BODYEOF
+          ## Nightly Integration Test Failure
+          Date: ${DATE}
+          Run: ${RUN_URL}
+          Failed Jobs: e2e=${{ needs.e2e.result }}, stress=${{ needs.stress.result }}
+          Recent Commits (24h): proxy=${{ steps.blame.outputs.proxy_commits }}, sim=${{ steps.blame.outputs.sim_commits }}, bench=${{ steps.blame.outputs.bench_commits }}
+          Auto-triage: Issue filed in ${TARGET} based on recent commit activity.
+          BODYEOF
+          )
 
           gh issue create \
             --repo "$TARGET" \
