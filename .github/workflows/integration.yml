@@ -104,6 +104,48 @@ jobs:
             -v --tb=short --timeout=300 \
             || [ $? -eq 5 ]
 
+  report-status:
+    runs-on: ubuntu-latest
+    needs: [single-node, pd-1p1d, xpyd]
+    if: always() && github.event_name == 'repository_dispatch' && github.event.client_payload.repo != ''
+    steps:
+      - name: Determine result
+        id: result
+        run: |
+          if [ "${{ needs.single-node.result }}" = "failure" ] || [ "${{ needs.pd-1p1d.result }}" = "failure" ] || [ "${{ needs.xpyd.result }}" = "failure" ]; then
+            echo "state=failure" >> "$GITHUB_OUTPUT"
+            echo "description=Integration tests failed" >> "$GITHUB_OUTPUT"
+          else
+            echo "state=success" >> "$GITHUB_OUTPUT"
+            echo "description=Integration tests passed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report back to source repo
+        env:
+          GH_TOKEN: ${{ secrets.INTEGRATION_TOKEN }}
+        run: |
+          REPO="${{ github.event.client_payload.repo }}"
+          REF="${{ github.event.client_payload.ref }}"
+          STATE="${{ steps.result.outputs.state }}"
+          DESC="${{ steps.result.outputs.description }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ -z "$REF" ] || [ -z "$REPO" ]; then
+            echo "No ref or repo in payload, skipping status report"
+            exit 0
+          fi
+
+          # Get the HEAD commit SHA of the PR branch
+          COMMIT_SHA=$(gh api "repos/xPyD-hub/${REPO}/git/ref/heads/${REF}" --jq '.object.sha' 2>/dev/null || echo "")
+
+          if [ -z "$COMMIT_SHA" ]; then
+            echo "Could not resolve commit SHA for ${REPO}@${REF}, skipping"
+            exit 0
+          fi
+
+          echo "Reporting ${STATE} to ${REPO}@${COMMIT_SHA}"
+          gh api "repos/xPyD-hub/${REPO}/statuses/${COMMIT_SHA}"             -f state="${STATE}"             -f context="integration-tests"             -f description="${DESC}"             -f target_url="${RUN_URL}"
+
   report-failure:
     runs-on: ubuntu-latest
     needs: [single-node, pd-1p1d, xpyd]
