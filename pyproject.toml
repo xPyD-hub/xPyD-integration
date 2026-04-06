@@ -14,7 +14,8 @@ dev = [
     "pytest-asyncio>=0.23.0",
     "pytest-timeout>=2.3.0",
     "xpyd-proxy>=1.2.0",
-    "xpyd-sim>=0.3.0",
+    "xpyd-sim>=0.4.0",
+    "xpyd-bench>=0.2.0",
     "httpx>=0.27.0",
 ]
 
