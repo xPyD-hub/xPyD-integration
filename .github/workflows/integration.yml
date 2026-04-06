@@ -85,7 +85,7 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run e2e tests
-        run: pytest tests/c1_single_node_basic/ -v --tb=short --timeout=120
+        run: pytest tests/c1_single_node_basic/ tests/c2_single_node_advanced/ -v --tb=short --timeout=120
 
   stress:
     runs-on: ubuntu-latest
