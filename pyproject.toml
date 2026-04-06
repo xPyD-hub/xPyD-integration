@@ -28,3 +28,6 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.setuptools.packages.find]
+include = ["xpyd_integration*"]
