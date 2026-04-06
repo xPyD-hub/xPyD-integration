@@ -11,6 +11,7 @@ Excluded from CI. Run manually:
 
 from __future__ import annotations
 
+import sys
 import concurrent.futures
 import os
 import subprocess
@@ -111,3 +112,36 @@ def test_concurrent_requests(cluster):
         results = [f.result() for f in concurrent.futures.as_completed(futures)]
 
     assert all(code == 200 for code in results), f"Some requests failed: {results}"
+
+
+def test_xpyd_bench_serve(cluster):
+    """Run xpyd-bench against the proxy (replaces vllm bench serve test)."""
+    import shutil
+    import subprocess
+
+    bench_bin = shutil.which("xpyd-bench")
+    if bench_bin is None:
+        # Try python -m
+        bench_cmd = [sys.executable, "-m", "xpyd_bench.main"]
+    else:
+        bench_cmd = [bench_bin]
+
+    result = subprocess.run(
+        [
+            *bench_cmd,
+            "--base-url", f"http://127.0.0.1:{cluster['proxy_port']}",
+            "--endpoint", "/v1/chat/completions",
+            "--model", cluster["model"],
+            "--max-concurrency", "4",
+            "--num-prompts", "20",
+            "--dataset-name", "random",
+            "--input-len", "10",
+            "--output-len", "5",
+            "--no-live",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    # xpyd-bench should complete without error
+    assert result.returncode == 0, f"xpyd-bench failed: {result.stderr}"
