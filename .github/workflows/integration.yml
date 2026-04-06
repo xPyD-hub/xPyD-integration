@@ -46,7 +46,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run single-node tests
         run: |
-          pytest tests/single_basic/ tests/single_advanced/ tests/single_concurrent_stress/ \
+          pytest xpyd_integration/single_basic/ xpyd_integration/single_advanced/ xpyd_integration/single_concurrent_stress/ \
             -v --tb=short --timeout=120 \
             || [ $? -eq 5 ]
 
@@ -71,7 +71,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run 1P1D tests
         run: |
-          pytest tests/1p1d_basic/ tests/1p1d_advanced/ tests/1p1d_concurrent_stress/ \
+          pytest xpyd_integration/1p1d_basic/ xpyd_integration/1p1d_advanced/ xpyd_integration/1p1d_concurrent_stress/ \
             -v --tb=short --timeout=120 \
             || [ $? -eq 5 ]
 
@@ -98,7 +98,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run xPyD tests
         run: |
-          pytest tests/xpyd_basic/ tests/xpyd_advanced/ tests/xpyd_concurrent_stress/ \
+          pytest xpyd_integration/xpyd_basic/ xpyd_integration/xpyd_advanced/ xpyd_integration/xpyd_concurrent_stress/ \
             -v --tb=short --timeout=300 \
             || [ $? -eq 5 ]
 
