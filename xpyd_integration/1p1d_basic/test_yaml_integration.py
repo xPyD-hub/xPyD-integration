@@ -14,7 +14,17 @@ from httpx import ASGITransport, AsyncClient
 from xpyd.config import ProxyConfig
 from xpyd.proxy import Proxy, RoundRobinSchedulingPolicy
 
-from conftest import _TOKENIZER_PATH, _PREFILL_PORT, _DECODE_PORT
+import importlib.util
+import os
+
+# Load conftest from the same directory explicitly
+_conftest_path = os.path.join(os.path.dirname(__file__), "conftest.py")
+_spec = importlib.util.spec_from_file_location("_local_conftest", _conftest_path)
+_conftest = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_conftest)
+_TOKENIZER_PATH = _conftest._TOKENIZER_PATH
+_PREFILL_PORT = _conftest._PREFILL_PORT
+_DECODE_PORT = _conftest._DECODE_PORT
 
 
 def _make_proxy_from_yaml(yaml_content: str, tmp_path: Path) -> Proxy:
