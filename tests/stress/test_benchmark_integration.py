@@ -25,7 +25,7 @@ import yaml
 _REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
-MODEL_PATH = os.path.join(_REPO_ROOT, "tests", "assets", "tokenizer")
+MODEL_PATH = os.path.join(_REPO_ROOT, "tokenizers", "DeepSeek-R1")
 
 NUM_PREFILL = 2
 NUM_DECODE = 16
