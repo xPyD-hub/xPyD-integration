@@ -15,7 +15,15 @@ from httpx import ASGITransport, AsyncClient
 
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-from conftest import make_sim_app
+from pathlib import Path
+from xpyd_sim.server import ServerConfig, create_app
+_TOKENIZER = str(Path(__file__).resolve().parent.parent / "assets" / "tokenizer")
+def make_sim_app(model_name=None, mode="dual"):
+    return create_app(ServerConfig(
+        mode=mode, model_name=model_name or _TOKENIZER,
+        prefill_delay_ms=0, kv_transfer_delay_ms=0,
+        decode_delay_per_token_ms=0, eos_min_ratio=1.0, max_model_len=131072,
+    ))
 from xpyd.config import ProxyConfig
 from xpyd.proxy import Proxy, RoundRobinSchedulingPolicy
 
