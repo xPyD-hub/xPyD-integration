@@ -46,7 +46,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run single-node tests
         run: |
-          pytest tests/single_basic/ tests/single_advanced/ tests/single_concurrency/ \
+          pytest tests/single_basic/ tests/single_advanced/ tests/single_stress/ \
             -v --tb=short --timeout=120 \
             || [ $? -eq 5 ]
 
@@ -71,7 +71,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run PD tests
         run: |
-          pytest tests/pd_basic/ tests/pd_advanced/ tests/pd_concurrency/ \
+          pytest tests/pd_basic/ tests/pd_advanced/ tests/pd_stress/ \
             -v --tb=short --timeout=120 \
             || [ $? -eq 5 ]
 
@@ -98,7 +98,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Run multi-PD tests
         run: |
-          pytest tests/multi_pd_basic/ tests/multi_pd_advanced/ tests/multi_pd_concurrency/ \
+          pytest tests/multi_pd_basic/ tests/multi_pd_advanced/ tests/multi_pd_stress/ \
             -v --tb=short --timeout=300 \
             || [ $? -eq 5 ]
 
