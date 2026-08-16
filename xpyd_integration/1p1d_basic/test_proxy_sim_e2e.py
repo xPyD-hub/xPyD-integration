@@ -90,7 +90,7 @@ _proxy = Proxy(
     decode_instances=[f"127.0.0.1:{_DECODE_PORT}"],
     model=_MODEL_NAME,
     scheduling_policy=RoundRobinSchedulingPolicy(),
-    generator_on_p_node=False,
+    first_token_source="decode",
 )
 _proxy_app = FastAPI()
 _proxy_app.add_middleware(

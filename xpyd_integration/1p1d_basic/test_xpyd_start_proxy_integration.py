@@ -1,12 +1,13 @@
 """Real integration tests for xpyd_start_proxy.sh with dummy nodes.
 
-Requires the xpyd-proxy repo to be available (for the shell script).
-Skips if the script is not found.
+Requires the xpyd-proxy source path in ``XPYD_PROXY_REPO``.
+Skips if the source checkout or shell script is not found.
 """
 
 from __future__ import annotations
 
 import os
+import signal
 import socket
 import subprocess
 import sys
@@ -17,15 +18,15 @@ from pathlib import Path
 import pytest
 import requests
 
-# Try to find the shell script from xpyd-proxy repo or installed location
-_PROXY_REPO = Path("/tmp/xPyD-proxy")
+_PROXY_REPO = Path(os.environ.get("XPYD_PROXY_REPO", "/tmp/xPyD-proxy"))
+_INTEGRATION_REPO = Path(__file__).resolve().parents[2]
 _SCRIPT = _PROXY_REPO / "xpyd" / "xpyd_start_proxy.sh"
 # Use the proxy repo's tokenizer since sim nodes are spawned from there
 _TOKENIZER_PATH = str(_PROXY_REPO / "tokenizers" / "DeepSeek-R1")
 
 pytestmark = pytest.mark.skipif(
     not _SCRIPT.exists(),
-    reason=f"xpyd_start_proxy.sh not found at {_SCRIPT}",
+    reason=f"xpyd_start_proxy.sh not found at {_SCRIPT}; set XPYD_PROXY_REPO",
 )
 
 PYTHON = sys.executable
@@ -61,22 +62,29 @@ def _wait_http_ok(url: str, timeout: float = 30.0) -> None:
 
 
 def _spawn_node(mode, port):
-    app_ref = "sim_adapter:prefill_app" if mode == "prefill" else "sim_adapter:decode_app"
+    app_ref = (
+        "xpyd_integration.sim_adapter:prefill_app"
+        if mode == "prefill"
+        else "xpyd_integration.sim_adapter:decode_app"
+    )
     return subprocess.Popen(
         [PYTHON, "-m", "uvicorn", app_ref, "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning"],
-        cwd=_PROXY_REPO, env={**os.environ, "PYTHONPATH": str(_PROXY_REPO)},
+        cwd=_INTEGRATION_REPO,
+        env={**ENV_BASE, "PYTHONPATH": str(_INTEGRATION_REPO)},
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        start_new_session=True,
     )
 
 
 def _stop_process(process: subprocess.Popen) -> None:
-    if process.poll() is not None:
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
         return
-    process.terminate()
     try:
         process.wait(timeout=5)
     except subprocess.TimeoutExpired:
-        process.kill()
+        os.killpg(process.pid, signal.SIGKILL)
         process.wait(timeout=5)
 
 
@@ -127,6 +135,7 @@ def _launch_proxy_via_script(
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        start_new_session=True,
     )
 
 

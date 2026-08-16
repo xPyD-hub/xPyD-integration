@@ -38,7 +38,7 @@ def _make_proxy_from_yaml(yaml_content: str, tmp_path: Path) -> Proxy:
         prefill=None,
         decode=None,
         port=8000,
-        generator_on_p_node=False,
+        first_token_source=None,
         roundrobin=False,
         log_level="warning",
     )
@@ -49,7 +49,7 @@ def _make_proxy_from_yaml(yaml_content: str, tmp_path: Path) -> Proxy:
         decode_instances=config.decode,
         model=config.model,
         scheduling_policy=RoundRobinSchedulingPolicy(),
-        generator_on_p_node=config.generator_on_p_node,
+        first_token_source=config.first_token_source,
     )
 
 
