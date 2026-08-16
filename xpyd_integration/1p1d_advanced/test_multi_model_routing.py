@@ -135,7 +135,7 @@ def _make_multi_model_proxy_app(addrs):
         decode_instances=all_decode,
         model=_TOKENIZER_PATH,
         scheduling_policy=sched,
-        generator_on_p_node=False,
+        first_token_source="decode",
         registry=reg,
     )
 

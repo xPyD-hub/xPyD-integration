@@ -106,7 +106,7 @@ def _make_proxy_app(config):
         decode_instances=config.decode,
         model=config.model,
         scheduling_policy=RoundRobinSchedulingPolicy(),
-        generator_on_p_node=config.generator_on_p_node,
+        first_token_source=config.first_token_source,
     )
     app = FastAPI()
     app.add_middleware(

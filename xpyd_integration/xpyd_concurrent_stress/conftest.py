@@ -62,7 +62,7 @@ def _make_proxy_app():
         decode_instances=[f"127.0.0.1:{p}" for p in _decode_ports],
         model=_TOKENIZER,
         scheduling_policy=RoundRobinSchedulingPolicy(),
-        generator_on_p_node=False,
+        first_token_source="decode",
     )
     app = FastAPI()
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -76,3 +76,8 @@ async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
+
+
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"

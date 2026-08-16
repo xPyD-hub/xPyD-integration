@@ -100,7 +100,7 @@ def _make_proxy_app() -> FastAPI:
         decode_instances=[f"127.0.0.1:{p}" for p in _DECODE_PORTS],
         model=_TOKENIZER_PATH,
         scheduling_policy=RoundRobinSchedulingPolicy(),
-        generator_on_p_node=False,
+        first_token_source="decode",
     )
     app = FastAPI()
     app.add_middleware(

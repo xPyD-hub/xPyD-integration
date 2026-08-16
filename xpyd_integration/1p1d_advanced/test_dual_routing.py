@@ -34,6 +34,11 @@ def make_sim_app(model_name=None, mode="dual"):
 _TOKENIZER_PATH = str(_Path(__file__).resolve().parent.parent / "assets" / "tokenizer")
 
 
+@pytest.fixture
+def anyio_backend():
+    return "asyncio"
+
+
 
 def _free_port():
     with socket.socket() as sock:
@@ -98,15 +103,15 @@ def dual_nodes():
 
 
 def _make_dual_proxy_app(addrs, node_models):
-    """Build a proxy with dual + P/D models."""
+    """Build a proxy with aggregated and P/D models."""
     reg = InstanceRegistry()
-    dual_instances = {}
+    aggregated_instances = {}
 
-    # Register dual instances
+    # The simulator calls full-model nodes "dual"; xPyD calls them aggregated.
     for name in ["dual1", "dual2", "dual3", "dual4"]:
         model = node_models[name]
-        reg.add("dual", addrs[name], model=model)
-        dual_instances.setdefault(model, []).append(addrs[name])
+        reg.add("aggregated", addrs[name], model=model)
+        aggregated_instances.setdefault(model, []).append(addrs[name])
 
     # Register P/D instances
     all_prefill = []
@@ -127,9 +132,9 @@ def _make_dual_proxy_app(addrs, node_models):
         decode_instances=all_decode,
         model=_TOKENIZER_PATH,
         scheduling_policy=sched,
-        generator_on_p_node=False,
+        first_token_source="decode",
         registry=reg,
-        dual_instances=dual_instances,
+        aggregated_instances=aggregated_instances,
     )
 
     app = FastAPI()
@@ -233,9 +238,9 @@ async def test_dual_unknown_model_error(dual_client: AsyncClient):
 async def test_dual_all_down_503(dual_client_and_registry):
     """All dual instances down returns 503."""
     cli, reg = dual_client_and_registry
-    # Mark deepseek-r1 dual instances as unhealthy
+    # Mark deepseek-r1 aggregated instances as unhealthy
     for info in reg.get_all_instances():
-        if info.model == "deepseek-r1" and info.role == "dual":
+        if info.model == "deepseek-r1" and info.role == "aggregated":
             reg.mark_unhealthy(info.address)
 
     resp = await cli.post(
@@ -278,9 +283,9 @@ async def test_all_dual_single_model(dual_nodes):
     all_addrs = list(addrs.values())
 
     reg = InstanceRegistry()
-    dual_map = {"test-model": all_addrs}
+    aggregated_map = {"test-model": all_addrs}
     for addr in all_addrs:
-        reg.add("dual", addr, model="test-model")
+        reg.add("aggregated", addr, model="test-model")
         reg.mark_healthy(addr)
 
     sched = RoundRobinSchedulingPolicy(registry=reg)
@@ -289,9 +294,9 @@ async def test_all_dual_single_model(dual_nodes):
         decode_instances=[],
         model=_TOKENIZER_PATH,
         scheduling_policy=sched,
-        generator_on_p_node=False,
+        first_token_source="decode",
         registry=reg,
-        dual_instances=dual_map,
+        aggregated_instances=aggregated_map,
     )
 
     app = FastAPI()
@@ -375,17 +380,17 @@ async def test_randomized_deployment(dual_nodes, seed):
     deployment = _generate_random_deployment(addrs, seed)
 
     reg = InstanceRegistry()
-    dual_map = {}
+    aggregated_map = {}
     all_prefill = []
     all_decode = []
 
     for model_cfg in deployment:
         name = model_cfg["name"]
         if model_cfg["mode"] == "dual":
-            dual_map[name] = model_cfg["instances"]
+            aggregated_map[name] = model_cfg["instances"]
             for addr in model_cfg["instances"]:
                 if addr not in [i.address for i in reg.get_all_instances()]:
-                    reg.add("dual", addr, model=name)
+                    reg.add("aggregated", addr, model=name)
         else:
             for addr in model_cfg["prefill"]:
                 if addr not in [i.address for i in reg.get_all_instances()]:
@@ -405,9 +410,9 @@ async def test_randomized_deployment(dual_nodes, seed):
         decode_instances=all_decode,
         model=_TOKENIZER_PATH,
         scheduling_policy=sched,
-        generator_on_p_node=False,
+        first_token_source="decode",
         registry=reg,
-        dual_instances=dual_map,
+        aggregated_instances=aggregated_map,
     )
 
     app = FastAPI()
