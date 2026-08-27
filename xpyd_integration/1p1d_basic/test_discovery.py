@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse, PlainTextResponse
 from httpx import ASGITransport, AsyncClient
 
-from xpyd.discovery import DiscoveryTimeout, NodeDiscovery
+from xpyd.discovery import NodeDiscovery
 
 
 def _free_port():
@@ -62,8 +62,8 @@ async def test_discovery_finds_healthy_nodes():
 
 
 @pytest.mark.anyio
-async def test_discovery_timeout_when_no_nodes():
-    """Discovery should raise DiscoveryTimeout when nodes are unreachable."""
+async def test_discovery_continues_when_no_nodes():
+    """Discovery should keep probing when nodes are unreachable."""
     disc = NodeDiscovery(
         prefill_instances=["127.0.0.1:1"],
         decode_instances=["127.0.0.1:2"],
@@ -71,14 +71,13 @@ async def test_discovery_timeout_when_no_nodes():
         wait_timeout=1.0,
     )
     await disc.start()
-    disc._task.remove_done_callback(disc._on_probe_done)
 
     ready = await disc.wait_until_ready()
     assert ready is False
     assert not disc.is_ready
-
-    with pytest.raises(DiscoveryTimeout):
-        await disc._task
+    assert disc._task is not None
+    assert not disc._task.done()
+    await disc.stop()
 
 
 @pytest.mark.anyio
