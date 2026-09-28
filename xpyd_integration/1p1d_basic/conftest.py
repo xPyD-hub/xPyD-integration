@@ -17,7 +17,8 @@ from httpx import ASGITransport, AsyncClient
 from pathlib import Path
 
 from xpyd_sim.server import ServerConfig, create_app
-from xpyd.proxy import Proxy, RoundRobinSchedulingPolicy
+from xpyd.proxy import Proxy
+from xpyd.scheduler import RoundRobinSchedulingPolicy
 
 # ---------------------------------------------------------------------------
 # Paths

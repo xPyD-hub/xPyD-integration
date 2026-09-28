@@ -12,7 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from httpx import ASGITransport, AsyncClient
 
 from xpyd.config import ProxyConfig
-from xpyd.proxy import Proxy, RoundRobinSchedulingPolicy
+from xpyd.proxy import Proxy
+from xpyd.scheduler import RoundRobinSchedulingPolicy
 
 import importlib.util
 import os

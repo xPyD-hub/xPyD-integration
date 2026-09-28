@@ -11,7 +11,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import ASGITransport, AsyncClient
 
-from xpyd.proxy import Proxy, RoundRobinSchedulingPolicy
+from xpyd.proxy import Proxy
+from xpyd.scheduler import RoundRobinSchedulingPolicy
 from xpyd.registry import InstanceRegistry
 
 from pathlib import Path as _Path

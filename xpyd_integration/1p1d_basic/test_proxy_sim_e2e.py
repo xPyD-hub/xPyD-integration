@@ -22,7 +22,8 @@ import pytest
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from xpyd.proxy import Proxy, RoundRobinSchedulingPolicy
+from xpyd.proxy import Proxy
+from xpyd.scheduler import RoundRobinSchedulingPolicy
 
 from xpyd_sim.server import ServerConfig, create_app
 
