@@ -25,7 +25,16 @@ xpyd_integration/
 
 ```bash
 pip install -e ".[dev]"
+pip install -e ../xPyD-proxy
 ```
+
+Proxy tests require the unified scheduler API from
+[xPyD-proxy#194](https://github.com/xPyD-hub/xPyD-proxy/pull/194).
+Use the matching proxy source checkout rather than an older PyPI release.
+Policies are imported from `xpyd.scheduler`; direct selection uses
+`select_node(SchedulingContext, candidates)`, and runtime tests retain and
+release `Scheduler.reserve(...)` reservations. No old scheduler API adapters
+are provided.
 
 ## Run Tests
 
@@ -43,6 +52,13 @@ pytest xpyd_integration/single_basic/ -v
 - **Nightly**: cron at 2am UTC, all repos at HEAD
 - **Release**: sub-repos dispatch on release
 - **Result reporting**: integration CI writes pass/fail back to source PR
+
+The 1P1D and multi-node jobs install the same proxy source checkout used by
+subprocess tests. A proxy dispatch selects its requested ref; other events use
+proxy `main`. For paired cross-repository changes, run **Integration Tests**
+manually on the integration PR branch and set `proxy_version` to the companion
+proxy branch or commit SHA. Automatic PR checks against proxy `main` require
+the companion proxy change to be merged first.
 
 ## License
 

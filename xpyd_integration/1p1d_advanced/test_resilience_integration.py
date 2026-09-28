@@ -25,7 +25,8 @@ def make_sim_app(model_name=None, mode="dual"):
         decode_delay_per_token_ms=0, eos_min_ratio=1.0, max_model_len=131072,
     ))
 from xpyd.config import ProxyConfig
-from xpyd.proxy import Proxy, RoundRobinSchedulingPolicy
+from xpyd.proxy import Proxy
+from xpyd.scheduler import RoundRobinSchedulingPolicy
 
 from pathlib import Path as _Path
 

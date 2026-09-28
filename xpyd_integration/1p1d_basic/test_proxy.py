@@ -1,13 +1,18 @@
 """Tests for proxy routing, scheduling, streaming."""
 
-import itertools
 import json
 from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 
-from xpyd.proxy import LoadBalancedScheduler, RoundRobinSchedulingPolicy
+from xpyd.scheduler import (
+    Candidate,
+    LoadBalancedScheduler,
+    RoundRobinSchedulingPolicy,
+    Scheduler,
+    SchedulingContext,
+)
 
 
 CHAT_PAYLOAD = {
@@ -111,28 +116,32 @@ async def test_streaming_token_count(client: AsyncClient):
 def test_round_robin_scheduling():
     policy = RoundRobinSchedulingPolicy()
     instances = ["a:1", "b:2", "c:3"]
-    cycler = itertools.cycle(instances)
-    results = [policy.schedule(cycler) for _ in range(6)]
+    candidates = [Candidate(address) for address in instances]
+    context = SchedulingContext(role="decode")
+    results = [policy.select_node(context, candidates) for _ in range(6)]
     assert results == ["a:1", "b:2", "c:3", "a:1", "b:2", "c:3"]
 
 
-def test_round_robin_schedule_with_full_signature():
+def test_round_robin_context_keeps_role_positions_independent():
     policy = RoundRobinSchedulingPolicy()
     instances = ["a:1", "b:2"]
-    cycler = itertools.cycle(instances)
+    candidates = [Candidate(address) for address in instances]
+    for role in ("prefill", "decode", "aggregated"):
+        context = SchedulingContext(role=role, request_len=100, max_tokens=50)
+        assert policy.select_node(context, candidates) == "a:1"
+        assert policy.select_node(context, candidates) == "b:2"
 
-    r1 = policy.schedule(cycler, True, 100, 1)
-    r2 = policy.schedule(cycler, False, 100, 50)
-    assert r1 == "a:1"
-    assert r2 == "b:2"
 
-
-def test_round_robin_schedule_completion_exists():
+def test_round_robin_reservation_release_is_idempotent():
     policy = RoundRobinSchedulingPolicy()
-    policy.schedule_completion(
-        prefill_instance="a:1", decode_instance=None, req_len=100
-    )
-    policy.schedule_completion(prefill_instance=None, decode_instance="b:2", req_len=50)
+    runtime = Scheduler()
+    context = SchedulingContext(role="decode", request_len=100)
+    lease = runtime.reserve(policy, context, ["a:1"])
+    assert lease.address == "a:1"
+    assert runtime._active["a:1"] == 1
+    lease.release()
+    lease.release()
+    assert not runtime._active
 
 
 @patch(
@@ -144,18 +153,15 @@ def test_load_balanced_scheduling(mock_query):
     decode = ["d1:1", "d2:2"]
     policy = LoadBalancedScheduler(prefill, decode)
 
-    p_cycler = itertools.cycle(prefill)
-    d_cycler = itertools.cycle(decode)
-
-    r1 = policy.schedule(p_cycler, is_prompt=True, request_len=100, max_tokens=50)
-    assert r1 in prefill
-
-    r2 = policy.schedule(p_cycler, is_prompt=True, request_len=100, max_tokens=50)
-    assert r2 in prefill
-    assert r2 != r1
-
-    d1 = policy.schedule(d_cycler, is_prompt=False, request_len=50, max_tokens=50)
-    assert d1 in decode
-    d2 = policy.schedule(d_cycler, is_prompt=False, request_len=50, max_tokens=50)
-    assert d2 in decode
-    assert d2 != d1
+    runtime = Scheduler()
+    p_context = SchedulingContext(role="prefill", request_len=100, max_tokens=50)
+    d_context = SchedulingContext(role="decode", request_len=50, max_tokens=50)
+    p_leases = [runtime.reserve(policy, p_context, prefill) for _ in range(2)]
+    d_leases = [runtime.reserve(policy, d_context, decode) for _ in range(2)]
+    assert {lease.address for lease in p_leases} == set(prefill)
+    assert {lease.address for lease in d_leases} == set(decode)
+    assert policy.prefill_bs_counter == policy.decode_bs_counter == [1, 1]
+    for lease in p_leases + d_leases:
+        lease.release()
+    assert policy.prefill_bs_counter == policy.decode_bs_counter == [0, 0]
+    assert policy.prefill_utils_counter == policy.decode_kv_utils_counter == [0, 0]

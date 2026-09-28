@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       proxy_version:
-        description: "xpyd-proxy version (e.g. 1.2.0, or 'main' for HEAD)"
-        default: "release"
+        description: "Proxy git ref (branch, tag, or SHA; use a matching branch for paired PRs)"
+        default: "main"
       sim_version:
         description: "xpyd-sim version (e.g. 0.4.0, or 'main' for HEAD)"
         default: "release"
@@ -62,7 +62,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: xPyD-hub/xPyD-proxy
-          ref: ${{ github.event.client_payload.repo == 'xPyD-proxy' && github.event.client_payload.ref || 'main' }}
+          ref: ${{ inputs.proxy_version || (github.event.client_payload.repo == 'xPyD-proxy' && github.event.client_payload.ref) || 'main' }}
           path: proxy-source
       - uses: actions/setup-python@v5
         with:
@@ -71,13 +71,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
-            pip install "git+https://github.com/xPyD-hub/xPyD-proxy@main"
             pip install "git+https://github.com/xPyD-hub/xPyD-sim@main"
           fi
-          if [ "${{ github.event.client_payload.ref }}" != "" ]; then
+          if [ "${{ github.event.client_payload.ref }}" != "" ] && [ "${{ github.event.client_payload.repo }}" != "xPyD-proxy" ]; then
             pip install "git+https://github.com/xPyD-hub/${{ github.event.client_payload.repo }}@${{ github.event.client_payload.ref }}"
           fi
           pip install -e ".[dev]"
+          pip install -e ./proxy-source
       - name: Run 1P1D tests
         env:
           XPYD_PROXY_REPO: ${{ github.workspace }}/proxy-source
@@ -91,6 +91,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+      - name: Check out proxy source
+        uses: actions/checkout@v4
+        with:
+          repository: xPyD-hub/xPyD-proxy
+          ref: ${{ inputs.proxy_version || (github.event.client_payload.repo == 'xPyD-proxy' && github.event.client_payload.ref) || 'main' }}
+          path: proxy-source
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -98,15 +104,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
-            pip install "git+https://github.com/xPyD-hub/xPyD-proxy@main"
             pip install "git+https://github.com/xPyD-hub/xPyD-sim@main"
             pip install "git+https://github.com/xPyD-hub/xPyD-bench@main"
           fi
-          if [ "${{ github.event.client_payload.ref }}" != "" ]; then
+          if [ "${{ github.event.client_payload.ref }}" != "" ] && [ "${{ github.event.client_payload.repo }}" != "xPyD-proxy" ]; then
             pip install "git+https://github.com/xPyD-hub/${{ github.event.client_payload.repo }}@${{ github.event.client_payload.ref }}"
           fi
           pip install -e ".[dev]"
+          pip install -e ./proxy-source
       - name: Run xPyD tests
+        env:
+          XPYD_PROXY_REPO: ${{ github.workspace }}/proxy-source
         run: |
           pytest xpyd_integration/xpyd_basic/ xpyd_integration/xpyd_advanced/ xpyd_integration/xpyd_concurrent_stress/ \
             -v --tb=short --timeout=300 \
