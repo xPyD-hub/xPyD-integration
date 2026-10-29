@@ -129,7 +129,7 @@ def _make_multi_model_proxy_app(addrs):
     for name in addrs:
         reg.mark_healthy(addrs[name])
 
-    sched = RoundRobinSchedulingPolicy(registry=reg)
+    sched = RoundRobinSchedulingPolicy()
 
     proxy = Proxy(
         prefill_instances=all_prefill,

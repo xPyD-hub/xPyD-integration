@@ -126,7 +126,7 @@ def _make_dual_proxy_app(addrs, node_models):
     for addr in addrs.values():
         reg.mark_healthy(addr)
 
-    sched = RoundRobinSchedulingPolicy(registry=reg)
+    sched = RoundRobinSchedulingPolicy()
     proxy = Proxy(
         prefill_instances=all_prefill,
         decode_instances=all_decode,
@@ -288,7 +288,7 @@ async def test_all_dual_single_model(dual_nodes):
         reg.add("aggregated", addr, model="test-model")
         reg.mark_healthy(addr)
 
-    sched = RoundRobinSchedulingPolicy(registry=reg)
+    sched = RoundRobinSchedulingPolicy()
     proxy = Proxy(
         prefill_instances=[],
         decode_instances=[],
@@ -404,7 +404,7 @@ async def test_randomized_deployment(dual_nodes, seed):
     for info in reg.get_all_instances():
         reg.mark_healthy(info.address)
 
-    sched = RoundRobinSchedulingPolicy(registry=reg)
+    sched = RoundRobinSchedulingPolicy()
     proxy = Proxy(
         prefill_instances=all_prefill,
         decode_instances=all_decode,
