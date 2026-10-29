@@ -144,14 +144,30 @@ def test_round_robin_reservation_release_is_idempotent():
     assert not runtime._active
 
 
+def _make_load_balanced_policy(prefill, decode, model_lens):
+    """Build LoadBalancedScheduler across proxy API versions.
+
+    Newer proxies require the model lengths to be injected, older ones query
+    them through the backend. Try the injection path first and fall back.
+    """
+    model_lengths = dict(zip([*prefill, *decode], model_lens, strict=True))
+    try:
+        return LoadBalancedScheduler(
+            prefill, decode, model_lengths=model_lengths
+        )
+    except TypeError:
+        return LoadBalancedScheduler(prefill, decode)
+
+
 @patch(
     "xpyd.scheduler.load_balanced.query_instance_model_len",
     return_value=[131072, 131072],
+    create=True,
 )
 def test_load_balanced_scheduling(mock_query):
     prefill = ["p1:1", "p2:2"]
     decode = ["d1:1", "d2:2"]
-    policy = LoadBalancedScheduler(prefill, decode)
+    policy = _make_load_balanced_policy(prefill, decode, [131072, 131072, 131072, 131072])
 
     runtime = Scheduler()
     p_context = SchedulingContext(role="prefill", request_len=100, max_tokens=50)
